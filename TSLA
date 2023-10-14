@@ -1,0 +1,70 @@
+# Importing Tesla Stock Price Data on Kaggle
+# Summary Statistics
+> summary(Tesla)
+      Date                 Open             High             Low             Close       
+ Min.   :2010-06-29   Min.   : 16.14   Min.   : 16.63   Min.   : 14.98   Min.   : 15.80  
+ 1st Qu.:2012-03-01   1st Qu.: 30.00   1st Qu.: 30.65   1st Qu.: 29.21   1st Qu.: 29.89  
+ Median :2013-11-05   Median :156.34   Median :162.37   Median :153.15   Median :158.16  
+ Mean   :2013-11-06   Mean   :132.44   Mean   :134.77   Mean   :130.00   Mean   :132.43  
+ 3rd Qu.:2015-07-14   3rd Qu.:220.56   3rd Qu.:224.10   3rd Qu.:217.12   3rd Qu.:220.02  
+ Max.   :2017-03-17   Max.   :287.67   Max.   :291.42   Max.   :280.40   Max.   :286.04  
+     Volume           Adj Close     
+ Min.   :  118500   Min.   : 15.80  
+ 1st Qu.: 1194350   1st Qu.: 29.89  
+ Median : 3180700   Median :158.16  
+ Mean   : 4270741   Mean   :132.43  
+ 3rd Qu.: 5662100   3rd Qu.:220.02  
+ Max.   :37163900   Max.   :286.04  
+
+> library(ggplot2)
+> 
+> # Convert the Date column to a Date object in R
+> Tesla$Date <- as.Date(Tesla$Date, format="%m/%d/%Y")
+> 
+> # Plot Adjusted Close Price over Time
+> ggplot(Tesla, aes(x = Date, y = `Adj Close`)) + 
++     geom_line() +
++     ggtitle("Tesla Adjusted Close Price Over Time") +
++     xlab("Date") + ylab("Adjusted Close Price")
+
+library(dplyr)
+
+# Calculate daily returns
+Tesla <- Tesla %>% 
+  arrange(Date) %>%
+  mutate(Daily_Return = (`Adj Close` / lag(`Adj Close`) - 1) * 100)
+
+# Calculate rolling standard deviation (volatility)
+window_size <- 30 # 30 days rolling window
+Tesla$Rolling_Volatility <- rollapplyr(Tesla$Daily_Return, window_size, sd, fill = NA)
+
+# Plot
+ggplot(Tesla, aes(x = Date, y = Rolling_Volatility)) + 
+  geom_line() +
+  ggtitle("Tesla 30-Day Rolling Volatility") +
+  xlab("Date") + ylab("Volatility (%)")
+
+# Plot Volume Over Time
+ggplot(Tesla, aes(x = Date, y = Volume)) + 
+  geom_bar(stat="identity", fill="blue") +
+  ggtitle("Tesla Trading Volume Over Time") +
+  xlab("Date") + ylab("Volume")
+
+# Calculate 30-day and 50-day moving averages
+Tesla$MA30 <- rollapplyr(Tesla$`Adj Close`, 30, mean, fill = NA)
+Tesla$MA50 <- rollapplyr(Tesla$`Adj Close`, 50, mean, fill = NA)
+
+# Plot Moving Average
+ggplot(Tesla, aes(x = Date)) + 
+  geom_line(aes(y = `Adj Close`, color = "Actual")) +
+  geom_line(aes(y = MA30, color = "30-Day MA")) +
+  geom_line(aes(y = MA50, color = "50-Day MA")) +
+  ggtitle("Tesla Adjusted Close Price with Moving Averages") +
+  xlab("Date") + ylab("Price") + 
+  scale_color_manual(values = c("Actual" = "black", "30-Day MA" = "blue", "50-Day MA" = "red"))
+
+# Correlation Analysis
+correlation_matrix <- cor(Tesla[,c("Open", "High", "Low", "Close", "Volume", "Adj Close")], use = "complete.obs")
+print(correlation_matrix)
+
+
